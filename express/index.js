@@ -3,6 +3,7 @@ import path from "path";
 import mongoose from "mongoose"
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken"
+import bcrypt from "bcrypt"
 
 mongoose.connect("mongodb://localhost:27017",{
   dbName:"Baccckend",
@@ -65,8 +66,10 @@ app.post("/register",async(req,res)=>{
   return res.redirect("/login")
   }
 
+  const hashedPassword = await bcrypt.hash(password,10)
+
   const user = await User.create({
-    name,email,password
+    name,email,password:hashedPassword
   })
 
   const token = jwt.sign({_id:user._id},"sauravpal")
@@ -81,12 +84,12 @@ app.post("/register",async(req,res)=>{
 
 app.post("/login",async(req,res)=>{
    
-  const {email,Password} = req.body
+  const {email,password} = req.body
   let user = await User.findOne({email})
 
   if(!user) return res.redirect("/register")
 
-  const isMatch = user.password === password
+  const isMatch =  bcrypt.compare(password,user.password)
   if(!isMatch) return res.render("login",{email,message:"incorrect password"})
 
   const token = jwt.sign({_id:user._id},"sauravpal")
