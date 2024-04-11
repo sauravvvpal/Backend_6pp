@@ -1,64 +1,65 @@
-import {User} from "../models/userModel.js"
+import { User } from "../models/userModel.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { sendCookie } from "../utils/features.js";
+import errorHandler from "../middlewares/error.js";
 
-export const getAllUsers = async(req,res)=>{
+export const login = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
 
-    const users = User.find({})
-   res.json({
-       success:true,
-       users,
-   })
-}
+    const user = await User.findOne({ email }).select("+password");
 
-export const createNewUser = async(req,res)=>{
+    if (!user) return next(new errorHandler("Invalid Email or Password", 400));
 
-    const {name,email,password} = req.body
-  await User.create({
-    name,
-    email,
-    password,
-  })
-   res.status(201).json({
-       success:true,
-       message:"Registered Successfully",
-   })
-}
+    const isMatch = await bcrypt.compare(password, user.password);
 
-export const special = (req,res)=>{
-    res.json({
-        success:"true",
-        message: "Just joking"
-    })
-}
+    if (!isMatch)
+      return next(new errorHandler("Invalid Email or Password", 400));
 
-export const getUserId = async(req,res)=>{
-    const {id} = req.params
-    const users = await User.findById(id)
+    sendCookie(res, user, `Welcome back, ${user.name}`, 200);
+  } catch (error) {
+    next(error);
+  }
+};
 
-    res.json({
-        success:"true",
-        users,
-    })
-}
+export const register = async (req, res, next) => {
+  try {
+    const { name, email, password } = req.body;
 
-export const updateUserId = async(req,res)=>{
-    const {id} = req.params
-    const users = await User.findById(id)
+    let user = await User.findOne({ email });
 
-    res.json({
-        success:"true",
-        message:"updated user",
-    })
-}
+    if (user) return next(new errorHandler("User already exist", 400));
 
-export const deleteUserId = async(req,res)=>{
-    const {id} = req.params
-    const users = await User.findById(id)
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    res.json({
-        success:"true",
-        message:"user deleted",
-    })
-}
+    user = await User.create({ name, email, password: hashedPassword });
 
+    sendCookie(user, res, "Registered Successfully", 201);
+  } catch (error) {
+    next(error);
+  }
+};
 
+export const getMyProfile = (req, res) => {
+  res.status(200).json({
+    success: true,
+    user: req.user,
+  });
+};
 
+export const logout = async (req, res) => {
+  try {
+    res
+      .status(200)
+      .cookie("token", "", {
+        expires: new Date(Date.now()),
+      })
+      .json({
+        success: true,
+        user: req.user,
+      });
+  } catch (error) {
+    next(error);
+  }
+};

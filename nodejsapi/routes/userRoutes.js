@@ -1,25 +1,22 @@
 import express from "express"
 import {User} from "../models/userModel.js"
-import { getAllUsers,
-    createNewUser,
-    special,
-    getUserId,
-    updateUserId,
-    deleteUserId
+import {
+    getMyProfile,
+    login,register,logout,
 } from "../controllers/user.js"
+import { isAuthenticated } from "../middlewares/auth.js"
 
 const router = express.Router()
 
-router.get("/all",getAllUsers)
+router.get("/me",isAuthenticated,getMyProfile)
 
-router.post("/new",createNewUser)
+router.post("/register",register)
 
-router.get("/special",special)
+router.post("/login",login)
+
+router.get("/logout",logout)
 
 //chaining of same routes but different methods
-router.route("/userid/:id").
-get(getUserId).
-put(updateUserId).
-delete(deleteUserId)
+//router.route("/userid/:id").get(getUserId)
 
 export default router
